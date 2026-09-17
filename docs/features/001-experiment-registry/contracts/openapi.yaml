@@ -1,0 +1,158 @@
+openapi: 3.1.1
+info:
+  title: LabSpec API
+  version: 1.0.0
+  description: API local para o registro de experimentos. Não enviar dados pessoais ou segredos.
+servers:
+  - url: http://localhost:3000
+    description: Desenvolvimento local
+tags:
+  - name: Experiments
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      responses:
+        "200":
+          description: Serviço disponível
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { const: ok }
+  /api/v1/experiments:
+    get:
+      tags: [Experiments]
+      operationId: listExperiments
+      responses:
+        "200":
+          description: Lista do mais recente ao mais antigo
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Experiment" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      tags: [Experiments]
+      operationId: createExperiment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateExperiment" }
+      responses:
+        "201":
+          description: Criado
+          headers:
+            Location:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExperimentEnvelope" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "413": { description: Corpo maior que 16 KiB }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /api/v1/experiments/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Experiments]
+      operationId: getExperiment
+      responses:
+        "200":
+          description: Encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExperimentEnvelope" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Experiments]
+      operationId: updateExperiment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateExperiment" }
+      responses:
+        "200":
+          description: Atualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExperimentEnvelope" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Experiments]
+      operationId: deleteExperiment
+      responses:
+        "204": { description: Removido }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+components:
+  schemas:
+    Experiment:
+      type: object
+      additionalProperties: false
+      required: [id, title, description, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, minLength: 3, maxLength: 100 }
+        description: { type: string, maxLength: 1000 }
+        status: { type: string, enum: [draft, running, completed] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateExperiment:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title: { type: string, minLength: 3, maxLength: 100 }
+        description: { type: string, maxLength: 1000, default: "" }
+    UpdateExperiment:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 3, maxLength: 100 }
+        description: { type: string, maxLength: 1000 }
+        status: { type: string, enum: [draft, running, completed] }
+    ExperimentEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data: { $ref: "#/components/schemas/Experiment" }
+    Problem:
+      type: object
+      required: [type, title, status, detail]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+  responses:
+    InvalidRequest:
+      description: Entrada inválida
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    NotFound:
+      description: Recurso inexistente
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    RateLimited:
+      description: Limite excedido
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }

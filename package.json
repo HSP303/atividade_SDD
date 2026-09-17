@@ -1,0 +1,17 @@
+{
+  "name": "labspec",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monorepo full stack orientado por Specification-Driven Development",
+  "engines": { "node": ">=22.0.0", "npm": ">=10.0.0" },
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "predev": "npm run build -w @labspec/contracts",
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @labspec/api\" \"npm run dev -w @labspec/web\"",
+    "build": "npm run build -w @labspec/contracts && npm run build -w @labspec/api && npm run build -w @labspec/web",
+    "typecheck": "npm run build -w @labspec/contracts && npm run typecheck -w @labspec/api && npm run typecheck -w @labspec/web",
+    "test": "npm run test -w @labspec/api && npm run test -w @labspec/web",
+    "check": "npm run typecheck && npm run build && npm test"
+  },
+  "devDependencies": { "concurrently": "10.0.5", "typescript": "7.0.2" }
+}
